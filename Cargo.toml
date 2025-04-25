@@ -1,0 +1,12 @@
+[package]
+name = "gm-language"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+logos = "0.12"        # For lexing
+thiserror = "1.0"     # For error handling
+rustyline = "9.1"     # For REPL
+colored = "2.0"       # For colorful error messages
+regex = "1.5"         # For regex
+rand = "0.8"          # For random number generation
