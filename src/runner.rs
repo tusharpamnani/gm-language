@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::Path;
 use colored::*;
-use crate::create_gm_border;
 
 // Import the new Rekt instead of LoveError
 use crate::error::Rekt;  

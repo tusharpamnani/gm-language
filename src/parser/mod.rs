@@ -2,7 +2,7 @@
 
 use crate::error::Rekt;
 use crate::lexer::Token;
-use crate::shared_types::{BinaryOp, Value};
+use crate::shared_types::{BinaryOp, Value, Type};
 use ast::Ast;
 
 pub mod ast;
@@ -27,28 +27,97 @@ impl Parser {
 
     fn declaration(&mut self) -> Result<Ast, Rekt> {
         match self.peek() {
-            Some(Token::Launch) => self.var_declaration(),
-            Some(Token::Loop) => self.declaration(),
+            Some(Token::Launch) => self.var_declaration(false),
+            Some(Token::BossFight) => self.function_declaration(),
+            Some(Token::Debug) => self.var_declaration(true), // Debug is used for constant declarations
             _ => self.statement(),
         }
     }
 
-    fn var_declaration(&mut self) -> Result<Ast, Rekt> {
-        self.advance(); // consume 'launch'
+    fn var_declaration(&mut self, is_constant: bool) -> Result<Ast, Rekt> {
+        self.advance(); // consume 'launch' or 'debug'
 
+        // Get variable name
         let name = match self.advance() {
             Some(Token::Identifier(name)) => name.clone(),
             _ => return Err(Rekt::Parser("Expected variable name".to_string())),
         };
 
-        self.consume(&Token::Match, "Expected 'match' after variable name")?; // assuming 'match' is the keyword for initialization
+        // Check for initialization
+        self.consume(&Token::Match, "Expected 'match' after variable name")?;
         let initializer = self.expression()?;
         self.consume(&Token::Semicolon, "Expected ';' after variable declaration")?;
 
         Ok(Ast::VariableDecl {
             name,
-            is_constant: false,
+            is_constant,
             initializer: Box::new(initializer),
+        })
+    }
+
+    fn function_declaration(&mut self) -> Result<Ast, Rekt> {
+        self.advance(); // consume 'bossfight'
+        
+        // Get function name
+        let name = match self.advance() {
+            Some(Token::Identifier(name)) => name.clone(),
+            _ => return Err(Rekt::Parser("Expected function name".to_string())),
+        };
+        
+        // Parse parameters
+        self.consume(&Token::LParen, "Expected '(' after function name")?;
+        let mut params = Vec::new();
+        if !self.check(&Token::RParen) {
+            loop {
+                let param_name = match self.advance() {
+                    Some(Token::Identifier(name)) => name.clone(),
+                    _ => return Err(Rekt::Parser("Expected parameter name".to_string())),
+                };
+                
+                // Optional type annotation
+                let param_type = if self.check(&Token::Colon) {
+                    self.advance(); // consume ':'
+                    match self.advance() {
+                        Some(Token::TypeInt) => Type::Number,
+                        Some(Token::TypeStr) => Type::Text,
+                        Some(Token::TypeBool) => Type::Boolean,
+                        _ => return Err(Rekt::Parser("Expected type annotation".to_string())),
+                    }
+                } else {
+                    Type::Number // Default to Number type
+                };
+                
+                params.push((param_name, param_type));
+                
+                if !self.check(&Token::Comma) {
+                    break;
+                }
+                self.advance(); // consume ','
+            }
+        }
+        self.consume(&Token::RParen, "Expected ')' after parameters")?;
+        
+        // Parse return type
+        let return_type = if self.check(&Token::Arrow) {
+            self.advance(); // consume '->'
+            match self.advance() {
+                Some(Token::TypeInt) => Some(Type::Number),
+                Some(Token::TypeStr) => Some(Type::Text),
+                Some(Token::TypeBool) => Some(Type::Boolean),
+                _ => return Err(Rekt::Parser("Expected return type".to_string())),
+            }
+        } else {
+            None
+        };
+        
+        // Parse function body
+        let body = self.block()?;
+        
+        Ok(Ast::FunctionDecl {
+            name,
+            params,
+            return_type,
+            body,
         })
     }
 
@@ -138,7 +207,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Result<Ast, Rekt> {
-        let expr = self.or()?;
+        let expr = self.equality()?;
 
         if matches!(self.peek(), Some(Token::Match)) {
             self.advance(); // consume 'match'
@@ -156,49 +225,192 @@ impl Parser {
         }
     }
 
-    fn or(&mut self) -> Result<Ast, Rekt> {
-        let mut expr1 = self.and()?; // Parse the left side of the `or` expression
-        
-        while self.match_token(Token::Or) { // Check for `||` operator
-            let expr2 = self.and()?; // Parse the right side of the `or` expression
-            expr1 = Ast::Binary {
-                left: Box::new(expr1),
-                operator: BinaryOp::Or, // Use `Or` operator for `||`
-                right: Box::new(expr2),
+    fn equality(&mut self) -> Result<Ast, Rekt> {
+        let mut expr = self.comparison()?;
+
+        while let Some(op) = self.match_equality_operator() {
+            let right = self.comparison()?;
+            expr = Ast::Binary {
+                left: Box::new(expr),
+                operator: op,
+                right: Box::new(right),
             };
         }
-        
-        Ok(expr1)
+
+        Ok(expr)
     }
 
-    fn and(&mut self) -> Result<Ast, Rekt> {
-        let mut expr1 = self.primary()?; // Parse a primary expression first (e.g., a value or variable)
+    fn match_equality_operator(&mut self) -> Option<BinaryOp> {
+        if matches!(self.peek(), Some(Token::Equal)) {
+            self.advance();
+            Some(BinaryOp::Equal)
+        } else if matches!(self.peek(), Some(Token::NotEqual)) {
+            self.advance();
+            Some(BinaryOp::NotEqual)
+        } else {
+            None
+        }
+    }
 
-        while self.match_token(Token::And) { // Check for `&&` operator
-            let expr2 = self.primary()?;
-            expr1 = Ast::Binary {
-                left: Box::new(expr1),
-                operator: BinaryOp::And, // Use `And` operator for `&&`
-                right: Box::new(expr2),
+    fn comparison(&mut self) -> Result<Ast, Rekt> {
+        let mut expr = self.term()?;
+
+        while let Some(op) = self.match_comparison_operator() {
+            let right = self.term()?;
+            expr = Ast::Binary {
+                left: Box::new(expr),
+                operator: op,
+                right: Box::new(right),
             };
         }
 
-        Ok(expr1)
+        Ok(expr)
+    }
+
+    fn match_comparison_operator(&mut self) -> Option<BinaryOp> {
+        if matches!(self.peek(), Some(Token::GreaterThan)) {
+            self.advance();
+            Some(BinaryOp::Greater)
+        } else if matches!(self.peek(), Some(Token::LessThan)) {
+            self.advance();
+            Some(BinaryOp::Less)
+        } else if matches!(self.peek(), Some(Token::GreaterThanEqual)) {
+            self.advance();
+            Some(BinaryOp::GreaterEqual)
+        } else if matches!(self.peek(), Some(Token::LessThanEqual)) {
+            self.advance();
+            Some(BinaryOp::LessEqual)
+        } else {
+            None
+        }
+    }
+
+    fn term(&mut self) -> Result<Ast, Rekt> {
+        let mut expr = self.factor()?;
+
+        while let Some(op) = self.match_term_operator() {
+            let right = self.factor()?;
+            expr = Ast::Binary {
+                left: Box::new(expr),
+                operator: op,
+                right: Box::new(right),
+            };
+        }
+
+        Ok(expr)
+    }
+
+    fn match_term_operator(&mut self) -> Option<BinaryOp> {
+        if matches!(self.peek(), Some(Token::Plus)) {
+            self.advance();
+            Some(BinaryOp::Add)
+        } else if matches!(self.peek(), Some(Token::Minus)) {
+            self.advance();
+            Some(BinaryOp::Subtract)
+        } else {
+            None
+        }
+    }
+
+    fn factor(&mut self) -> Result<Ast, Rekt> {
+        let mut expr = self.unary()?;
+
+        while let Some(op) = self.match_factor_operator() {
+            let right = self.unary()?;
+            expr = Ast::Binary {
+                left: Box::new(expr),
+                operator: op,
+                right: Box::new(right),
+            };
+        }
+
+        Ok(expr)
+    }
+
+    fn match_factor_operator(&mut self) -> Option<BinaryOp> {
+        if matches!(self.peek(), Some(Token::Star)) {
+            self.advance();
+            Some(BinaryOp::Multiply)
+        } else if matches!(self.peek(), Some(Token::Slash)) {
+            self.advance();
+            Some(BinaryOp::Divide)
+        } else {
+            None
+        }
+    }
+
+    fn unary(&mut self) -> Result<Ast, Rekt> {
+        if matches!(self.peek(), Some(Token::Not)) {
+            self.advance();
+            let expr = self.unary()?;
+            Ok(Ast::Unary {
+                operator: BinaryOp::Not,
+                operand: Box::new(expr),
+            })
+        } else {
+            self.call()
+        }
+    }
+
+    fn call(&mut self) -> Result<Ast, Rekt> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if matches!(self.peek(), Some(Token::LParen)) {
+                self.advance();
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, callee: Ast) -> Result<Ast, Rekt> {
+        let mut arguments = Vec::new();
+
+        if !matches!(self.peek(), Some(Token::RParen)) {
+            loop {
+                arguments.push(self.expression()?);
+                if !matches!(self.peek(), Some(Token::Comma)) {
+                    break;
+                }
+                self.advance(); // consume ','
+            }
+        }
+
+        self.consume(&Token::RParen, "Expected ')' after arguments")?;
+
+        match callee {
+            Ast::Variable(name) => Ok(Ast::Call {
+                callee: name,
+                arguments,
+            }),
+            _ => Err(Rekt::Parser("Can only call functions".to_string())),
+        }
     }
 
     fn primary(&mut self) -> Result<Ast, Rekt> {
         if let Some(token) = self.peek() {
-            // First handle the immutable borrow by storing `peek()` in a local variable
             let token = token.clone();
     
             match token {
                 Token::Number(value) => {
                     self.advance();
-                    Ok(Ast::Literal(Value::Number(value.clone() as f64)))
+                    Ok(Ast::Literal(Value::Token(value.to_string())))
                 },
                 Token::Text(text) => {
                     self.advance();
                     Ok(Ast::Literal(Value::Text(text.clone())))
+                },
+                Token::True => {
+                    self.advance();
+                    Ok(Ast::Literal(Value::Signal(true)))
+                },
+                Token::False => {
+                    self.advance();
+                    Ok(Ast::Literal(Value::Signal(false)))
                 },
                 Token::Identifier(name) => {
                     self.advance();
@@ -210,17 +422,12 @@ impl Parser {
                     self.consume(&Token::RParen, "Expected ')' after expression")?;
                     Ok(Ast::Grouping(Box::new(expr)))
                 },
-                _ => Err(Rekt::Parser("Unexpected token".to_string())),
+                _ => Err(Rekt::Parser(format!("Unexpected token: {}", token))),
             }
-            
         } else {
-            Err(Rekt::Parser("Unexpected token".to_string())) // Handle the case where peek() is None
+            Err(Rekt::Parser("Unexpected end of input".to_string()))
         }
     }
-    
-    
-    
-    
 
     fn advance(&mut self) -> Option<&Token> {
         if !self.is_at_end() {
@@ -249,7 +456,7 @@ impl Parser {
             Err(Rekt::Parser(message.to_string()))
         }
     }
-
+    #[allow(dead_code)]
     fn match_token(&mut self, token: Token) -> bool {
         if let Some(current_token) = self.tokens.get(self.current) {
             if *current_token == token {

@@ -1,7 +1,10 @@
+#[allow(dead_code)]
+
 use std::fmt;
 use crate::parser::ast::Ast;
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum Value {
     Number(f64),
     Text(String),
@@ -22,6 +25,8 @@ pub enum Value {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+
+#[allow(dead_code)]
 pub enum BinaryOp {
     Add,           // cuddle
     Subtract,      // breakup

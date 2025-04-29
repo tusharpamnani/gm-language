@@ -13,5 +13,5 @@ pub enum Rekt {
     Runtime(String),
 
     #[error("Type error: {0}")]
-    Type(String),
+    Type(String),  // Changed from Syntax to Type to match usage
 }

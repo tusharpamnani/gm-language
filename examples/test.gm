@@ -1,0 +1,91 @@
+// GM Language Example
+// This example demonstrates the key features of the GM language
+
+// Variable declarations (tokens)
+token greeting = "GM World!"; // String variable
+token counter = 0;           // Number variable
+token is_gm = true;         // Boolean variable
+
+// Constants (blocks)
+block MAX_COUNT = 5;        // Number constant
+block GREETING_PREFIX = "GM "; // String constant
+
+// Print statements (broadcast)
+broadcast "Welcome to GM Language Example";
+broadcast greeting;
+
+// Arithmetic operations
+token a = 10;
+token b = 5;
+
+// Using standard operators
+token sum = a + b;        // Addition
+token diff = a - b;       // Subtraction
+token product = a * b;    // Multiplication
+token quotient = a / b;   // Division
+
+// Using GM-specific operators
+token stake_result = a stake b;    // Addition alternative
+token burn_result = a burn b;      // Subtraction alternative
+token yield_result = a yield b;    // Multiplication alternative
+token swap_result = a swap b;      // Division alternative
+
+broadcast "Arithmetic Results:";
+broadcast "Sum: " + sum;
+broadcast "Stake Result: " + stake_result;
+
+// Conditional statements (sus/rekt)
+sus (is_gm) {
+    broadcast "GM is true!";
+} rekt {
+    broadcast "Not GM today...";
+}
+
+// While loop (grind)
+counter = 0;
+grind (counter < MAX_COUNT) {
+    broadcast GREETING_PREFIX + counter;
+    counter = counter + 1;
+}
+
+// Function declaration (mine)
+mine say_gm(name) {
+    broadcast GREETING_PREFIX + name;
+    return name + " says GM back!";
+}
+
+// Function call
+token response = say_gm("Satoshi");
+broadcast response;
+
+// Function with type annotations
+mine add_numbers(a: int, b: int) {
+    return a + b;
+}
+
+token result = add_numbers(5, 10);
+broadcast "5 + 10 = " + result;
+
+// Nested conditions
+token value = 42;
+sus (value > 50) {
+    broadcast "Value is greater than 50";
+} rekt sus (value > 30) {
+    broadcast "Value is between 31 and 50";
+} rekt {
+    broadcast "Value is 30 or less";
+}
+
+// Loop with break (crash)
+counter = 0;
+grind (true) {
+    counter = counter + 1;
+    broadcast "Loop iteration: " + counter;
+    
+    sus (counter >= 3) {
+        broadcast "Breaking out of loop";
+        crash;
+    }
+}
+
+broadcast "GM Language Example Complete!";

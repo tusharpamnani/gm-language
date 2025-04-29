@@ -1,8 +1,10 @@
+#[allow(dead_code)]
 use colored::*;
 use rand::Rng;
 
 // Crypto-themed emojis and messages
 pub const CRYPTO_EMOJIS: &[&str] = &["💎", "🪙", "🔥", "🚀", "⚡", "💡", "🪐", "💰", "📈", "🌕", "💸", "🌍"];
+#[allow(dead_code)]
 pub const SUCCESS_MESSAGES: &[&str] = &[
     "To the moon! 🚀",
     "Your code is on fire! 🔥",
@@ -28,6 +30,7 @@ pub fn get_random_emoji() -> String {
     CRYPTO_EMOJIS[rng.gen_range(0..CRYPTO_EMOJIS.len())].to_string()
 }
 
+#[allow(dead_code)]
 pub fn get_random_success_message() -> String {
     let mut rng = rand::thread_rng();
     SUCCESS_MESSAGES[rng.gen_range(0..SUCCESS_MESSAGES.len())].to_string()
@@ -41,9 +44,20 @@ pub fn get_random_error_message() -> String {
 pub fn create_crypto_border(message: &str) -> String {
     let width = message.len() + 4;
     let border: String = "🚀".repeat(width);
-    format!("{}\n🚀 {} 🚀\n{}", border, message, border)
+    format!("{}
+🚀 {} 🚀
+{}", border, message, border)
 }
 
+pub fn create_gm_border(message: &str) -> String {
+    let width = message.len() + 4;
+    let border: String = "💚".repeat(width);
+    format!("{}
+💚 {} 💚
+{}", border, message, border)
+}
+
+#[allow(dead_code)]
 pub fn print_crypto_help() {
     println!("{}", create_crypto_border("🌍 Crypto Language Quick Guide 🌍").bright_cyan());
     println!("
@@ -66,6 +80,7 @@ pub fn print_crypto_help() {
 ");
 }
 
+#[allow(dead_code)]
 pub fn print_random_crypto_quote() {
     let quotes = [
         "In code as in crypto, simplicity is decentralized.",
@@ -79,6 +94,7 @@ pub fn print_random_crypto_quote() {
     println!("{}", create_crypto_border(quote).bright_magenta());
 }
 
+#[allow(dead_code)]
 pub fn handle_special_commands(line: &str) -> bool {
     match line.trim() {
         "crypto help" => {
