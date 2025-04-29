@@ -301,10 +301,10 @@ impl Parser {
     }
 
     fn match_term_operator(&mut self) -> Option<BinaryOp> {
-        if matches!(self.peek(), Some(Token::Plus)) {
+        if matches!(self.peek(), Some(Token::Plus | Token::Stake)) {
             self.advance();
             Some(BinaryOp::Add)
-        } else if matches!(self.peek(), Some(Token::Minus)) {
+        } else if matches!(self.peek(), Some(Token::Minus | Token::Burn)) {
             self.advance();
             Some(BinaryOp::Subtract)
         } else {
@@ -328,10 +328,10 @@ impl Parser {
     }
 
     fn match_factor_operator(&mut self) -> Option<BinaryOp> {
-        if matches!(self.peek(), Some(Token::Star)) {
+        if matches!(self.peek(), Some(Token::Star | Token::Yield)) {
             self.advance();
             Some(BinaryOp::Multiply)
-        } else if matches!(self.peek(), Some(Token::Slash)) {
+        } else if matches!(self.peek(), Some(Token::Slash | Token::Swap)) {
             self.advance();
             Some(BinaryOp::Divide)
         } else {
@@ -466,4 +466,37 @@ impl Parser {
         }
         false
     }
+
+    fn binary(&mut self) -> Result<Ast, Rekt> {
+        let mut expr = self.unary()?;
+    
+        while let Some(token) = self.peek() {
+            let op = match token {
+                Token::Plus | Token::Stake => BinaryOp::Add,
+                Token::Minus | Token::Burn => BinaryOp::Subtract,
+                Token::Star | Token::Yield => BinaryOp::Multiply,
+                Token::Slash | Token::Swap => BinaryOp::Divide,
+                Token::Equal => BinaryOp::Equal,
+                Token::NotEqual => BinaryOp::NotEqual,
+                Token::GreaterThan => BinaryOp::Greater,
+                Token::LessThan => BinaryOp::Less,
+                Token::GreaterThanEqual => BinaryOp::GreaterEqual,
+                Token::LessThanEqual => BinaryOp::LessEqual,
+                Token::And => BinaryOp::And,
+                Token::Or => BinaryOp::Or,
+                _ => break,
+            };
+    
+            self.advance();
+            let right = self.unary()?;
+            expr = Ast::Binary {
+                left: Box::new(expr),
+                operator: op,
+                right: Box::new(right),
+            };
+        }
+    
+        Ok(expr)
+    }
 }
+

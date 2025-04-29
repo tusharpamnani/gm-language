@@ -66,13 +66,13 @@ pub enum Token {
     
     // Special GM operators
     #[token("stake")]
-    StakeOp,     // Alternative for '+'
+    Stake,     // Alternative for '+'
     #[token("yield")]
-    YieldOp,     // Alternative for '*'
+    Yield,     // Alternative for '*'
     #[token("burn")]
-    BurnOp,      // Alternative for '-'
+    Burn,      // Alternative for '-'
     #[token("swap")]
-    SwapOp,      // Alternative for '/'
+    Swap,      // Alternative for '/'
     
     // Comparison & Assignment
     #[token("==")]
@@ -142,10 +142,10 @@ impl fmt::Display for Token {
             Token::Text(s) => write!(f, "\"{}\"", s),
             Token::True => write!(f, "true"),
             Token::False => write!(f, "false"),
-            Token::StakeOp => write!(f, "stake"),
-            Token::YieldOp => write!(f, "yield"),
-            Token::BurnOp => write!(f, "burn"),
-            Token::SwapOp => write!(f, "swap"),
+            Token::Stake => write!(f, "stake"),
+            Token::Yield => write!(f, "yield"),
+            Token::Burn => write!(f, "burn"),
+            Token::Swap => write!(f, "swap"),
             Token::Not => write!(f, "not"),
             Token::And => write!(f, "and"),
             Token::Or => write!(f, "or"),

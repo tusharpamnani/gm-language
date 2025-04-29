@@ -22,6 +22,9 @@ use crate::parser::Parser;
 use crate::fun::*;
 
 fn main() -> io::Result<()> {
+    // Clear the terminal screen as the first action
+    clear_screen();
+    
     let args: Vec<String> = env::args().collect();
     
     match args.len() {
@@ -131,6 +134,24 @@ fn run_file(path: &str) -> io::Result<()> {
     Ok(())
 }
 
+// Cross-platform function to clear the terminal screen
+fn clear_screen() {
+    // For Windows
+    if cfg!(target_os = "windows") {
+        let _ = std::process::Command::new("cmd")
+            .args(["/c", "cls"])
+            .status();
+    } 
+    // For Unix-like systems (Linux, macOS)
+    else {
+        let _ = std::process::Command::new("clear")
+            .status();
+    }
+    
+    // Fallback using ANSI escape codes (works in most modern terminals)
+    print!("\x1B[2J\x1B[1;1H");
+}
+
 fn print_welcome_message() {
     println!("{}", r#"
 ╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮
@@ -143,26 +164,16 @@ fn print_welcome_message() {
     println!("{}", "\n🚀 Quick Reference:".bright_yellow());
     println!("   token x = 10;            // Variables represent tokens");
     println!("   block DIAMOND = 100;     // Constants in the blockchain");
-    println!("   broadcast \"GM!\";        // Share a message to the chain");
+    println!("   ping \"GM!\";            // Share a message to the chain");
     println!("   x stake y;               // Addition operation");
     println!("   x yield y;               // Multiplication operation");
     println!("   x burn y;                // Subtraction operation");
     println!("   x swap y;                // Division operation");
     println!("\n   mine greet(name) {{         // Define a function"); 
+    println!("     ping \"GM \" + name;");
+    println!("     return name;");
     println!("   }}");  // Double curly braces to escape
     
-    println!("mine calculate_gas(amount, rate) {{");  // Double curly braces
-    println!("}}");
-    
-    println!("if (eth > 5) {{");  // Double curly braces
-    println!("}} else {{");  // Double curly braces
-    println!("}}");
-    
-    println!("while (i < 5) {{");  // Double curly braces
-    println!("}}");
-    println!("     broadcast \"GM \" + name;");
-    println!("     return name;");
-    println!("   }}");
     println!("\n💥 Type 'gm_break;' to end the GM connection...");
     println!("💡 Type 'crypto help' for more info\n");
 }
@@ -216,8 +227,8 @@ fn handle_special_commands(command: &str) -> bool {
             true
         },
         "clear" | "cls" => {
-            // Clear screen with ANSI escape code
-            print!("\x1B[2J\x1B[1;1H");
+            // Clear screen using our cross-platform function
+            clear_screen();
             true
         },
         "examples" => {
@@ -235,7 +246,7 @@ fn print_help_message() {
     println!("   - Variables are called 'tokens'");
     println!("   - Constants are called 'blocks'");
     println!("   - Functions are declared with 'mine'");
-    println!("   - Print with 'broadcast'");
+    println!("   - Print with 'ping'");
     println!("   - Standard math operations: stake (+), burn (-), yield (*), swap (/)");
     println!("   - Control flow: if/else, while loops");
     println!("\n💼 Special Commands:");
@@ -276,16 +287,16 @@ fn print_examples() {
     println!("// Conditional statements");
     println!("token eth = 10;");
     println!("if (eth > 5) {{");
-    println!("    broadcast \"High ETH balance!\";");
+    println!("    ping \"High ETH balance!\";");
     println!("}} else {{");
-    println!("    broadcast \"Low ETH balance.\";");
+    println!("    ping \"Low ETH balance.\";");
     println!("}}");
     println!("");
     
     println!("// Loops");
     println!("token i = 0;");
     println!("while (i < 5) {{");
-    println!("    broadcast \"Mining block \" + i;");
+    println!("    ping \"Mining block \" + i;");
     println!("    i = i stake 1;");
     println!("}};");
     
